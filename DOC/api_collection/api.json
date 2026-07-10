@@ -1,0 +1,461 @@
+{
+  "info": {
+    "_postman_id": "d3f1a2b0-6e4c-4a9a-9c1a-doc4ppo1ntapi",
+    "name": "DocAppoint API",
+    "description": "Comprehensive Postman API Collection for testing DocAppoint Doctor Appointment Booking features. Features dynamic variable propagation (session/JWT handled naturally via cookies where applicable, doctor/appointment/review IDs extracted dynamically via post-request test scripts).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication & Session",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const requestBody = JSON.parse(pm.request.body.raw);",
+                  "",
+                  "    pm.environment.set(\"userEmail\", requestBody.email);",
+                  "    pm.environment.set(\"userPassword\", requestBody.password);",
+                  "",
+                  "    console.log(\"User credentials saved to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahim Uddin\",\n  \"email\": \"user1@docappoint.com\",\n  \"photoURL\": \"https://i.ibb.co/user-demo.jpg\",\n  \"password\": \"Abcd@1234\",\n  \"confirmPassword\": \"Abcd@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-up/email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "sign-up", "email"]
+            },
+            "description": "Password must satisfy ^(?=.*[a-z])(?=.*[A-Z]).{6,}$ (min 6 chars, 1 uppercase, 1 lowercase). confirmPassword must match password."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Email/Password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "",
+                  "    // Better Auth typically issues an httpOnly session cookie automatically",
+                  "    // captured by Postman's cookie jar. If a bearer token is also returned",
+                  "    // in the body, persist it for APIs that expect an Authorization header.",
+                  "    if (jsonData.token) {",
+                  "        pm.environment.set(\"authToken\", jsonData.token);",
+                  "        console.log(\"Auth token saved to environment\");",
+                  "    }",
+                  "",
+                  "    if (jsonData.user && jsonData.user.id) {",
+                  "        pm.environment.set(\"userId\", jsonData.user.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-in/email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "sign-in", "email"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Google OAuth)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-in/social?provider=google",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "sign-in", "social"],
+              "query": [{ "key": "provider", "value": "google" }]
+            },
+            "description": "Redirect-based OAuth flow — open in a browser rather than calling directly from Postman."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.user && jsonData.user.id) {",
+                  "        pm.environment.set(\"userId\", jsonData.user.id);",
+                  "        console.log(\"Session userId saved to environment\");",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/session",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "session"]
+            },
+            "description": "Used to confirm the logged-in user, including after a page reload, without redirecting to Login on private routes."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-out",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "sign-out"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Doctors",
+      "item": [
+        {
+          "name": "Get All Doctors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const jsonData = pm.response.json();",
+                  "    const doctors = jsonData.data || jsonData;",
+                  "    if (Array.isArray(doctors) && doctors.length > 0) {",
+                  "        pm.environment.set(\"doctorId\", doctors[0]._id || doctors[0].id);",
+                  "        console.log(\"First doctorId saved to environment\");",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "doctors"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Top Rated Doctors",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors/top-rated",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "doctors", "top-rated"]
+            },
+            "description": "Returns exactly 3 top-rated doctors for the Home page."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Doctor by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/doctors/{{doctorId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "doctors", "{{doctorId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Appointments",
+      "item": [
+        {
+          "name": "Get All Appointments (search + sort)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments?search=Ayesha&sortBy=fee&order=asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments"],
+              "query": [
+                { "key": "search", "value": "Ayesha", "description": "Filter by doctor name" },
+                { "key": "sortBy", "value": "fee", "description": "fee | rating | name" },
+                { "key": "order", "value": "asc", "description": "asc | desc" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Book Appointment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Status code is not 409 (slot conflict)\", function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(409);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    const appointment = jsonData.data || jsonData;",
+                  "    pm.environment.set(\"appointmentId\", appointment._id || appointment.id);",
+                  "    console.log(\"appointmentId saved to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userEmail\": \"{{userEmail}}\",\n  \"doctorId\": \"{{doctorId}}\",\n  \"doctorName\": \"Dr. Ayesha Rahman\",\n  \"patientName\": \"Rahim Uddin\",\n  \"gender\": \"Male\",\n  \"phone\": \"01712345678\",\n  \"appointmentDate\": \"2026-05-12\",\n  \"appointmentTime\": \"10:30 AM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments"]
+            },
+            "description": "Returns 409 Conflict if this doctor already has an appointment at the same date + time (double-booking prevention)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/mine",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "mine"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Appointment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientName\": \"Rahim Uddin\",\n  \"gender\": \"Male\",\n  \"phone\": \"01798765432\",\n  \"appointmentDate\": \"2026-05-15\",\n  \"appointmentTime\": \"11:00 AM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "{{appointmentId}}"]
+            },
+            "description": "doctorId, doctorName, and userEmail are read-only and must not be sent/changed. Owner-only — returns 403 if the appointment belongs to another user."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Appointment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/appointments/{{appointmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "appointments", "{{appointmentId}}"]
+            },
+            "description": "Owner-only — returns 403 if the appointment belongs to another user."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Get Reviews for Doctor",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews/{{doctorId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews", "{{doctorId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    const review = jsonData.data || jsonData;",
+                  "    pm.environment.set(\"reviewId\", review._id || review.id);",
+                  "    console.log(\"reviewId saved to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"doctorId\": \"{{doctorId}}\",\n  \"appointmentId\": \"{{appointmentId}}\",\n  \"rating\": 5,\n  \"comment\": \"Very attentive and explained everything clearly.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reviews"]
+            },
+            "description": "Requires a completed booking (appointmentId) with this doctor. A user may submit one review per appointment, so multiple reviews per doctor are allowed across separate bookings."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Update Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahim Uddin\",\n  \"photoURL\": \"https://i.ibb.co/updated-photo.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{userEmail}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{userEmail}}"]
+            },
+            "description": "Self-only — returns 403 if attempting to update another user's profile."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
