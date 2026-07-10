@@ -1,0 +1,31 @@
+{
+  "name": "cat_08_backend",
+  "version": "1.0.0",
+  "description": "A course project backend for doctor appointment",
+  "keywords": [
+    "bacckend",
+    "project",
+    "node",
+    "express"
+  ],
+  "homepage": "https://github.com/Ashraful-IR/CAT_08_BACKEND#readme",
+  "bugs": {
+    "url": "https://github.com/Ashraful-IR/CAT_08_BACKEND/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ashraful-IR/CAT_08_BACKEND.git"
+  },
+  "license": "ISC",
+  "author": "Md Ashraful ISlam",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}
