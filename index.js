@@ -7,44 +7,58 @@ dns.setServers([
   "103.129.238.255",
   "192.168.1.1",
 ]);
+
 const express = require("express");
-//Database connection
+const cors = require("cors");
 const { connectdb } = require("./db/dbconfig");
 const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
+
+// Configure CORS to support session/cookies
+app.use(
+  cors({
+    origin: ["http://localhost:5002", "http://127.0.0.1:5002"],
+    credentials: true,
+  })
+);
+
 app.use(express.json());
-const port = process.env.PORT;
 
-//user registration
-app.post("/api/auth/sign-up/email", (req, res) => {
-  const { name, email, password, confirmPassword, photoURL } = req.body;
-  if (!name || !email || !password || !confirmPassword || !photoURL) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
-  if (password !== confirmPassword) {
-    return res.status(400).json({ message: "Passwords do not match" });
-  }
-  // Here you would typically save the user to the database
-  res.status(201).json({ message: "User registered successfully" });
+const port = process.env.PORT || 5001;
+
+// Route Imports
+const registerRoute = require("./src/route/auth/register.route");
+const loginRoute = require("./src/route/auth/login.route");
+const sessionRoute = require("./src/route/auth/session.route");
+const doctorsRoute = require("./src/route/doctors/doctors.route");
+const appointmentsRoute = require("./src/route/appointments/appointments.route");
+const reviewsRoute = require("./src/route/reviews/reviews.route");
+const usersRoute = require("./src/route/users/users.route");
+
+// Register Routes
+app.use("/api/auth", registerRoute);
+app.use("/api/auth", loginRoute);
+app.use("/api/auth", sessionRoute);
+app.use("/api/doctors", doctorsRoute);
+app.use("/api/appointments", appointmentsRoute);
+app.use("/api/reviews", reviewsRoute);
+app.use("/api/users", usersRoute);
+
+// Base route for server health check
+app.get("/", (req, res) => {
+  res.json({ message: "DocAppoint API server running" });
 });
 
-//user login
-app.post("/api/auth/sign-in/email", (req, res) => {
-  const { email, password } = req.body; 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
-  }
-  else {
-    // Here you would typically check the user's credentials against the database
-    res.status(200).json({ message: "User logged in successfully" });
-  }
-});
-
-
-
-
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+// Initialize database connection then start express server
+connectdb()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Server is running on http://localhost:${port}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Failed to start server due to DB connection error:", err);
+    process.exit(1);
+  });

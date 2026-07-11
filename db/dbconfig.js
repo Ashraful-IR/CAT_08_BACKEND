@@ -1,29 +1,42 @@
 const { MongoClient, ServerApiVersion } = require("mongodb");
-
 const dotenv = require("dotenv");
 dotenv.config();
-const uri =
-process.env.DB_URL;
 
+const uri = process.env.DB_URL;
 
-  const client = new MongoClient(uri, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    },
-  });
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
 
-  async function run() {
-    try {
-      await client.connect();
-      await client.db("admin").command({ ping: 1 });
-      console.log(
-        "Pinged your deployment. You successfully connected to MongoDB!"
-      );
-    } finally {
-      await client.close();
-    }
-    }
+let dbConnection = null;
 
-    run().catch(console.dir);
+async function connectdb() {
+  if (dbConnection) return dbConnection;
+  try {
+    await client.connect();
+    // Defaulting to "docappoint" or the DB from connection string if configured
+    dbConnection = client.db("docappoint");
+    console.log("Successfully connected to MongoDB!");
+    return dbConnection;
+  } catch (error) {
+    console.error("Database connection failed:", error);
+    throw error;
+  }
+}
+
+function getDb() {
+  if (!dbConnection) {
+    throw new Error("Database not initialized. Call connectdb first.");
+  }
+  return dbConnection;
+}
+
+module.exports = {
+  connectdb,
+  getDb,
+  client,
+};
