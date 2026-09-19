@@ -22,6 +22,7 @@ async function connectdb() {
     dbConnection = client.db("docappoint");
     console.log("Successfully connected to MongoDB!");
     return dbConnection;
+    
   } catch (error) {
     console.error("Database connection failed:", error);
     throw error;
