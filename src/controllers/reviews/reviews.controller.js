@@ -1,7 +1,7 @@
-const {
+import {
   getReviewsForDoctor,
   createReview,
-} = require("../../services/reviews/reviews.service");
+} from "../../services/reviews/reviews.service.js";
 
 const fetchDoctorReviews = async (req, res) => {
   try {
@@ -33,7 +33,4 @@ const submitDoctorReview = async (req, res) => {
   }
 };
 
-module.exports = {
-  fetchDoctorReviews,
-  submitDoctorReview,
-};
+export { fetchDoctorReviews, submitDoctorReview };

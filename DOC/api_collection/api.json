@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "d3f1a2b0-6e4c-4a9a-9c1a-doc4ppo1ntapi",
     "name": "DocAppoint API",
-    "description": "Comprehensive Postman API Collection for testing DocAppoint Doctor Appointment Booking features. Features dynamic variable propagation (session/JWT handled naturally via cookies where applicable, doctor/appointment/review IDs extracted dynamically via post-request test scripts).",
+    "description": "Comprehensive Postman API Collection for testing DocAppoint Doctor Appointment Booking features. Authentication is handled by Better Auth under /api/auth and uses a session cookie (better-auth.session_token) — enable Postman's cookie jar / 'Send cookies' so protected requests reuse the session established by Login. Features dynamic variable propagation (user, doctor, appointment and review IDs extracted via post-request test scripts).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -16,15 +16,20 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "    pm.response.to.have.status(201);",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "if (pm.response.code === 201) {",
+                  "if (pm.response.code === 200) {",
                   "    const requestBody = JSON.parse(pm.request.body.raw);",
                   "",
                   "    pm.environment.set(\"userEmail\", requestBody.email);",
                   "    pm.environment.set(\"userPassword\", requestBody.password);",
+                  "",
+                  "    const jsonData = pm.response.json();",
+                  "    if (jsonData.user && jsonData.user.id) {",
+                  "        pm.environment.set(\"userId\", jsonData.user.id);",
+                  "    }",
                   "",
                   "    console.log(\"User credentials saved to environment\");",
                   "}"
@@ -40,14 +45,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Rahim Uddin\",\n  \"email\": \"user1@docappoint.com\",\n  \"photoURL\": \"https://i.ibb.co/user-demo.jpg\",\n  \"password\": \"Abcd@1234\",\n  \"confirmPassword\": \"Abcd@1234\"\n}"
+              "raw": "{\n  \"name\": \"Rahim Uddin\",\n  \"email\": \"user1@docappoint.com\",\n  \"image\": \"https://i.ibb.co/user-demo.jpg\",\n  \"password\": \"Abcd@1234\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/sign-up/email",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "sign-up", "email"]
             },
-            "description": "Password must satisfy ^(?=.*[a-z])(?=.*[A-Z]).{6,}$ (min 6 chars, 1 uppercase, 1 lowercase). confirmPassword must match password."
+            "description": "Better Auth email/password sign-up. Body: name, email, password (min 6 chars) and optional image (avatar URL, stored as the user's `image`). On success Better Auth sets the session cookie."
           },
           "response": []
         },
@@ -65,16 +70,11 @@
                   "if (pm.response.code === 200) {",
                   "    const jsonData = pm.response.json();",
                   "",
-                  "    // Better Auth typically issues an httpOnly session cookie automatically",
-                  "    // captured by Postman's cookie jar. If a bearer token is also returned",
-                  "    // in the body, persist it for APIs that expect an Authorization header.",
-                  "    if (jsonData.token) {",
-                  "        pm.environment.set(\"authToken\", jsonData.token);",
-                  "        console.log(\"Auth token saved to environment\");",
-                  "    }",
-                  "",
+                  "    // Better Auth sets the better-auth.session_token cookie here.",
+                  "    // Protected requests authenticate via that cookie (Postman’s cookie jar).",
                   "    if (jsonData.user && jsonData.user.id) {",
                   "        pm.environment.set(\"userId\", jsonData.user.id);",
+                  "        console.log(\"userId saved to environment\");",
                   "    }",
                   "}"
                 ],
@@ -95,21 +95,28 @@
               "raw": "{{baseUrl}}/api/auth/sign-in/email",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "sign-in", "email"]
-            }
+            },
+            "description": "Better Auth email/password sign-in. Sets the better-auth.session_token cookie; there is no bearer token. Run this before protected requests so Postman's cookie jar sends the session."
           },
           "response": []
         },
         {
           "name": "Login (Google OAuth)",
           "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/sign-in/social?provider=google",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "sign-in", "social"],
-              "query": [{ "key": "provider", "value": "google" }]
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"google\",\n  \"callbackURL\": \"http://localhost:5002\"\n}"
             },
-            "description": "Redirect-based OAuth flow — open in a browser rather than calling directly from Postman."
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/sign-in/social",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "sign-in", "social"]
+            },
+            "description": "Starts a Better Auth Google sign-in. Returns JSON containing the provider authorization `url` — open that url in a browser to complete the flow. Google redirects to {BETTER_AUTH_URL}/api/auth/callback/google (configure this as an Authorized redirect URI), then back to callbackURL. Requires GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET in .env."
           },
           "response": []
         },
@@ -139,11 +146,11 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/api/auth/session",
+              "raw": "{{baseUrl}}/api/auth/get-session",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "session"]
+              "path": ["api", "auth", "get-session"]
             },
-            "description": "Used to confirm the logged-in user, including after a page reload, without redirecting to Login on private routes."
+            "description": "Returns the current Better Auth session (user + session) from the session cookie; null when not signed in. A compatibility alias is also available at GET /api/auth/session returning { user: { id, name, email, photoURL } }."
           },
           "response": []
         },
@@ -155,7 +162,8 @@
               "raw": "{{baseUrl}}/api/auth/sign-out",
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "sign-out"]
-            }
+            },
+            "description": "Ends the current Better Auth session and clears the session cookie."
           },
           "response": []
         }
@@ -285,7 +293,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "appointments"]
             },
-            "description": "Returns 409 Conflict if this doctor already has an appointment at the same date + time (double-booking prevention)."
+            "description": "Books an appointment for the signed-in user (Better Auth session cookie). Returns 409 Conflict if this doctor already has an appointment at the same date + time (double-booking prevention)."
           },
           "response": []
         },
@@ -297,7 +305,8 @@
               "raw": "{{baseUrl}}/api/appointments/mine",
               "host": ["{{baseUrl}}"],
               "path": ["api", "appointments", "mine"]
-            }
+            },
+            "description": "Returns the signed-in user's appointments (Better Auth session cookie)."
           },
           "response": []
         },
@@ -330,7 +339,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "appointments", "{{appointmentId}}"]
             },
-            "description": "doctorId, doctorName, and userEmail are read-only and must not be sent/changed. Owner-only — returns 403 if the appointment belongs to another user."
+            "description": "doctorId, doctorName, and userEmail are read-only and must not be sent/changed. Owner-only — returns 403 if the appointment belongs to another user. Uses the Better Auth session cookie."
           },
           "response": []
         },
@@ -356,7 +365,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "appointments", "{{appointmentId}}"]
             },
-            "description": "Owner-only — returns 403 if the appointment belongs to another user."
+            "description": "Owner-only — returns 403 if the appointment belongs to another user. Uses the Better Auth session cookie."
           },
           "response": []
         }
@@ -413,7 +422,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "reviews"]
             },
-            "description": "Requires a completed booking (appointmentId) with this doctor. A user may submit one review per appointment, so multiple reviews per doctor are allowed across separate bookings."
+            "description": "Requires a completed booking (appointmentId) with this doctor by the signed-in user (Better Auth session cookie). A user may submit one review per appointment, so multiple reviews per doctor are allowed across separate bookings."
           },
           "response": []
         }
@@ -451,7 +460,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "users", "{{userEmail}}"]
             },
-            "description": "Self-only — returns 403 if attempting to update another user's profile."
+            "description": "Self-only — returns 403 if attempting to update another user's profile. Uses the Better Auth session cookie. The photoURL value is stored on the Better Auth user as `image`."
           },
           "response": []
         }

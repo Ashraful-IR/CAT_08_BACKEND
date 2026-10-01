@@ -1,12 +1,12 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   fetchAppointments,
   createAppointment,
   fetchMyAppointments,
   editAppointment,
   removeAppointment,
-} = require("../../controllers/appointments/appointments.controller");
-const { authMiddleware } = require("../../middleware/auth");
+} from "../../controllers/appointments/appointments.controller.js";
+import { authMiddleware } from "../../middleware/auth.js";
 
 const router = express.Router();
 
@@ -16,4 +16,4 @@ router.post("/", authMiddleware, createAppointment);
 router.patch("/:id", authMiddleware, editAppointment);
 router.delete("/:id", authMiddleware, removeAppointment);
 
-module.exports = router;
+export default router;

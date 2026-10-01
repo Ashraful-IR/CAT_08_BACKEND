@@ -1,4 +1,18 @@
-const dns = require("dns");
+import dns from "dns";
+import path from "path";
+import { fileURLToPath } from "url";
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import { toNodeHandler, fromNodeHeaders } from "better-auth/node";
+
+import { auth } from "./src/lib/auth.js";
+import { connectdb } from "./db/dbconfig.js";
+import doctorsRoute from "./src/route/doctors/doctors.route.js";
+import appointmentsRoute from "./src/route/appointments/appointments.route.js";
+import reviewsRoute from "./src/route/reviews/reviews.route.js";
+import usersRoute from "./src/route/users/users.route.js";
+
 dns.setServers([
   "8.8.8.8",
   "8.8.4.4",
@@ -8,13 +22,9 @@ dns.setServers([
   "192.168.1.1",
 ]);
 
-const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
-
 
 const clientOrigins = [
   "http://localhost:5002",
@@ -34,21 +44,35 @@ app.use(
   })
 );
 
+// Backwards-compatible alias for the old custom GET /api/auth/session.
+// Must be registered before the Better Auth catch-all handler.
+app.get("/api/auth/session", async (req, res) => {
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
+
+  if (!session || !session.user) {
+    return res.status(401).json({ message: "No active session" });
+  }
+
+  return res.status(200).json({
+    user: {
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      photoURL: session.user.image,
+    },
+  });
+});
+
+// Better Auth owns everything under /api/auth/* and must be mounted BEFORE
+// express.json(), which would otherwise consume the request stream first.
+// Express 5 wildcard syntax is `{*name}`.
+app.all("/api/auth/{*any}", toNodeHandler(auth));
+
 app.use(express.json());
 
-// Route Imports
-const registerRoute = require("./src/route/auth/register.route");
-const loginRoute = require("./src/route/auth/login.route");
-const sessionRoute = require("./src/route/auth/session.route");
-const doctorsRoute = require("./src/route/doctors/doctors.route");
-const appointmentsRoute = require("./src/route/appointments/appointments.route");
-const reviewsRoute = require("./src/route/reviews/reviews.route");
-const usersRoute = require("./src/route/users/users.route");
-
-// Register Routes
-app.use("/api/auth", registerRoute);
-app.use("/api/auth", loginRoute);
-app.use("/api/auth", sessionRoute);
+// Feature routes (auth is fully handled by Better Auth above).
 app.use("/api/doctors", doctorsRoute);
 app.use("/api/appointments", appointmentsRoute);
 app.use("/api/reviews", reviewsRoute);
@@ -61,8 +85,11 @@ app.get("/", (req, res) => {
 
 // On Vercel (serverless) the app is exported and handled by the platform;
 // locally we connect to the DB first and then start listening.
-if (require.main === module) {
-  const { connectdb } = require("./db/dbconfig");
+const isMain =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isMain) {
   const port = process.env.PORT || 5001;
 
   connectdb()
@@ -77,4 +104,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = app;
+export default app;

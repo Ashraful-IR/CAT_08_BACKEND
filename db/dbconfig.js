@@ -1,5 +1,6 @@
-const { MongoClient, ServerApiVersion } = require("mongodb");
-const dotenv = require("dotenv");
+import { MongoClient, ServerApiVersion } from "mongodb";
+import dotenv from "dotenv";
+
 dotenv.config();
 
 const uri = process.env.DB_URL;
@@ -12,17 +13,21 @@ const client = new MongoClient(uri, {
   },
 });
 
-let dbConnection = null;
+// Defaulting to "docappoint" or the DB from connection string if configured.
+// This handle is available before an explicit connect: the driver dials the
+// server lazily on the first operation, which lets Better Auth build its
+// adapter at import time.
+const db = client.db("docappoint");
+
+let isConnected = false;
 
 async function connectdb() {
-  if (dbConnection) return dbConnection;
+  if (isConnected) return db;
   try {
     await client.connect();
-    // Defaulting to "docappoint" or the DB from connection string if configured
-    dbConnection = client.db("docappoint");
+    isConnected = true;
     console.log("Successfully connected to MongoDB!");
-    return dbConnection;
-    
+    return db;
   } catch (error) {
     console.error("Database connection failed:", error);
     throw error;
@@ -30,14 +35,10 @@ async function connectdb() {
 }
 
 function getDb() {
-  if (!dbConnection) {
+  if (!isConnected) {
     throw new Error("Database not initialized. Call connectdb first.");
   }
-  return dbConnection;
+  return db;
 }
 
-module.exports = {
-  connectdb,
-  getDb,
-  client,
-};
+export { connectdb, getDb, client, db };

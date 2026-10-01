@@ -1,9 +1,9 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   fetchDoctors,
   fetchTopRated,
   fetchDoctorById,
-} = require("../../controllers/doctors/doctors.controller");
+} from "../../controllers/doctors/doctors.controller.js";
 
 const router = express.Router();
 
@@ -11,4 +11,4 @@ router.get("/top-rated", fetchTopRated);
 router.get("/:id", fetchDoctorById);
 router.get("/", fetchDoctors);
 
-module.exports = router;
+export default router;

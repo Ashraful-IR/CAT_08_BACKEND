@@ -1,8 +1,8 @@
-const {
+import {
   getAllDoctors,
   getTopRatedDoctors,
   getDoctorById,
-} = require("../../services/doctors/doctors.service");
+} from "../../services/doctors/doctors.service.js";
 
 const fetchDoctors = async (req, res) => {
   try {
@@ -33,8 +33,4 @@ const fetchDoctorById = async (req, res) => {
   }
 };
 
-module.exports = {
-  fetchDoctors,
-  fetchTopRated,
-  fetchDoctorById,
-};
+export { fetchDoctors, fetchTopRated, fetchDoctorById };

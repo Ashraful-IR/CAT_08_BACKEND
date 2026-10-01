@@ -1,4 +1,4 @@
-const { getDb } = require("../../../db/dbconfig");
+import { getDb } from "../../../db/dbconfig.js";
 
 const updateUserProfile = async (email, updateData, currentUser) => {
   if (email !== currentUser.email) {
@@ -10,11 +10,13 @@ const updateUserProfile = async (email, updateData, currentUser) => {
   const { name, photoURL } = updateData;
 
   const db = getDb();
-  const usersCollection = db.collection("users");
+  // Better Auth owns this collection (singular "user").
+  const usersCollection = db.collection("user");
 
   const updateFields = {};
   if (name) updateFields.name = name;
-  if (photoURL) updateFields.photoURL = photoURL;
+  // Better Auth stores the avatar in `image`; the API still accepts `photoURL`.
+  if (photoURL) updateFields.image = photoURL;
 
   if (Object.keys(updateFields).length === 0) {
     throw new Error("No fields provided to update");
@@ -26,19 +28,18 @@ const updateUserProfile = async (email, updateData, currentUser) => {
     { returnDocument: "after" }
   );
 
-  const updatedUser = result.value || await usersCollection.findOne({ email });
+  const updatedUser =
+    result.value || (await usersCollection.findOne({ email }));
 
   return {
     message: "Profile updated successfully",
     user: {
-      id: updatedUser._id.toString(),
+      id: updatedUser.id || updatedUser._id?.toString(),
       name: updatedUser.name,
       email: updatedUser.email,
-      photoURL: updatedUser.photoURL,
+      photoURL: updatedUser.image,
     },
   };
 };
 
-module.exports = {
-  updateUserProfile,
-};
+export { updateUserProfile };

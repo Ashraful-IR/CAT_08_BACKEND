@@ -1,68 +1,33 @@
-const jwt = require("jsonwebtoken");
-const { getDb } = require("../../db/dbconfig");
-const { ObjectId } = require("mongodb");
+import { auth } from "../lib/auth.js";
+import { fromNodeHeaders } from "better-auth/node";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-const parseCookies = (cookieHeader) => {
-  const cookies = {};
-  if (!cookieHeader) return cookies;
-  cookieHeader.split(";").forEach((cookie) => {
-    const parts = cookie.split("=");
-    cookies[parts[0].trim()] = parts[1] ? parts[1].trim() : "";
-  });
-  return cookies;
-};
-
+// Resolves the Better Auth session from the request cookies and exposes a
+// normalized req.user. `photoURL` is kept as an alias of Better Auth's `image`
+// so the existing appointment/review/user code continues to work unchanged.
 const authMiddleware = async (req, res, next) => {
   try {
-    let token = null;
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
 
-    // 1. Try to extract from Authorization header
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    }
-
-    // 2. Try to extract from Cookies if not found in header
-    if (!token && req.headers.cookie) {
-      const cookies = parseCookies(req.headers.cookie);
-      token = cookies.token || cookies.session;
-    }
-
-    if (!token) {
+    if (!session || !session.user) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (!decoded || !decoded.userId) {
-      return res.status(401).json({ message: "Invalid or expired token" });
-    }
-
-    // Fetch user from DB
-    const db = getDb();
-    const user = await db.collection("users").findOne({ _id: new ObjectId(decoded.userId) });
-
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    // Attach user to request
     req.user = {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      photoURL: user.photoURL,
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      photoURL: session.user.image,
+      image: session.user.image,
     };
 
-    next();
+    return next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid or expired token", error: error.message });
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired session", error: error.message });
   }
 };
 
-module.exports = {
-  authMiddleware,
-  JWT_SECRET,
-};
+export { authMiddleware };

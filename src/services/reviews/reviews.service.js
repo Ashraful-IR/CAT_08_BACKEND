@@ -1,5 +1,5 @@
-const { getDb } = require("../../../db/dbconfig");
-const { ObjectId } = require("mongodb");
+import { ObjectId } from "mongodb";
+import { getDb } from "../../../db/dbconfig.js";
 
 const getReviewsForDoctor = async (doctorId) => {
   const db = getDb();
@@ -77,7 +77,4 @@ const createReview = async (reviewData, currentUser) => {
   return newReview;
 };
 
-module.exports = {
-  getReviewsForDoctor,
-  createReview,
-};
+export { getReviewsForDoctor, createReview };

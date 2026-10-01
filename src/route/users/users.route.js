@@ -1,9 +1,9 @@
-const express = require("express");
-const { editUserProfile } = require("../../controllers/users/users.controller");
-const { authMiddleware } = require("../../middleware/auth");
+import express from "express";
+import { editUserProfile } from "../../controllers/users/users.controller.js";
+import { authMiddleware } from "../../middleware/auth.js";
 
 const router = express.Router();
 
 router.patch("/:email", authMiddleware, editUserProfile);
 
-module.exports = router;
+export default router;

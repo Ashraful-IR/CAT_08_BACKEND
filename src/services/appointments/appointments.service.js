@@ -1,5 +1,5 @@
-const { getDb } = require("../../../db/dbconfig");
-const { ObjectId } = require("mongodb");
+import { ObjectId } from "mongodb";
+import { getDb } from "../../../db/dbconfig.js";
 
 const getAppointments = async (queryOptions) => {
   const db = getDb();
@@ -191,7 +191,7 @@ const deleteAppointment = async (id, currentUser) => {
   return { message: "Appointment deleted successfully" };
 };
 
-module.exports = {
+export {
   getAppointments,
   bookAppointment,
   getMyAppointments,

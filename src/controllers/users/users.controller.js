@@ -1,4 +1,4 @@
-const { updateUserProfile } = require("../../services/users/users.service");
+import { updateUserProfile } from "../../services/users/users.service.js";
 
 const editUserProfile = async (req, res) => {
   try {
@@ -11,6 +11,4 @@ const editUserProfile = async (req, res) => {
   }
 };
 
-module.exports = {
-  editUserProfile,
-};
+export { editUserProfile };

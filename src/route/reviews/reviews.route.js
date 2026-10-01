@@ -1,13 +1,13 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   fetchDoctorReviews,
   submitDoctorReview,
-} = require("../../controllers/reviews/reviews.controller");
-const { authMiddleware } = require("../../middleware/auth");
+} from "../../controllers/reviews/reviews.controller.js";
+import { authMiddleware } from "../../middleware/auth.js";
 
 const router = express.Router();
 
 router.get("/:doctorId", fetchDoctorReviews);
 router.post("/", authMiddleware, submitDoctorReview);
 
-module.exports = router;
+export default router;

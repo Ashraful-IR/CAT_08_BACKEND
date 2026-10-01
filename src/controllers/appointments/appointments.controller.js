@@ -1,10 +1,10 @@
-const {
+import {
   getAppointments,
   bookAppointment,
   getMyAppointments,
   updateAppointment,
   deleteAppointment,
-} = require("../../services/appointments/appointments.service");
+} from "../../services/appointments/appointments.service.js";
 
 const fetchAppointments = async (req, res) => {
   try {
@@ -77,7 +77,7 @@ const removeAppointment = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   fetchAppointments,
   createAppointment,
   fetchMyAppointments,
