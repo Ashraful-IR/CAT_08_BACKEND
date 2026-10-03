@@ -43,6 +43,17 @@ const crossSiteCookies = crossSiteFlag
   ? crossSiteFlag === "true"
   : Boolean(baseUrl && baseUrl.startsWith("https://"));
 
+// CHIPS `Partitioned` cookies are keyed to the TOP-LEVEL SITE at set time, so a
+// partitioned cookie is NOT sent when an OAuth redirect chain comes back with a
+// different top-level site (our frontend → accounts.google.com → this backend's
+// callback). Better Auth then fails its state check and redirects to /error with
+// ?error=state_mismatch. PARTITIONED_COOKIES=false restores the classic cross-site
+// `SameSite=None; Secure` cookie, which rides the whole chain and also works for
+// the frontend's credentialed XHRs (the direct API model). Default: partitioned,
+// i.e. unchanged unless the deployment opts out.
+const partitionedFlag = process.env.PARTITIONED_COOKIES?.trim();
+const partitionedCookies = partitionedFlag ? partitionedFlag !== "false" : true;
+
 export const auth = betterAuth({
   baseURL: baseUrl,
   secret: process.env.BETTER_AUTH_SECRET,
@@ -76,7 +87,7 @@ export const auth = betterAuth({
           defaultCookieAttributes: {
             sameSite: "none",
             secure: true,
-            partitioned: true,
+            partitioned: partitionedCookies,
           },
         },
       }
